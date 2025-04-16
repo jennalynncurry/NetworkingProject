@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Chat Server for Client-Server Messaging System
+Chat Server for Client-Server Messaging System with TLS/SSL
 
 Listens on a port, handles client connections, enforces unique usernames,
 and supports real-time message forwarding between users. Includes support
@@ -8,17 +8,18 @@ for listing users and graceful exits.
 """
 
 import socket
+import ssl
 import threading
 import argparse
 
 # Dictionary to store active users
 users = {}
 
-def handle_client(client_socket: socket.socket, address: tuple[str, int]) -> None:
+def handle_client(client_socket: ssl.SSLSocket, address: tuple[str, int]) -> None:
     """Handles communication with a connected client.
 
     Args:
-        client_socket: The socket connected to the client.
+        client_socket: The SSL socket connected to the client.
         address: The client's address as a (host, port) tuple.
     """
     username = None
@@ -76,6 +77,9 @@ def start_server(port: int) -> None:
     Args:
         port: Port number to bind the server socket to.
     """
+    context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+    context.load_cert_chain(certfile="server.crt", keyfile="server.key")
+
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     server_socket.bind(('0.0.0.0', port))
     server_socket.listen()
@@ -84,7 +88,8 @@ def start_server(port: int) -> None:
     while True:
         try:
             client_socket, address = server_socket.accept()
-            threading.Thread(target=handle_client, args=(client_socket, address), daemon=True).start()
+            ssl_socket = context.wrap_socket(client_socket, server_side=True)
+            threading.Thread(target=handle_client, args=(ssl_socket, address), daemon=True).start()
         except KeyboardInterrupt:
             print("\nServer shutting down.")
             break
