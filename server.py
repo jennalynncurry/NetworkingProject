@@ -4,7 +4,7 @@ Chat Server for Client-Server Messaging System with TLS/SSL
 
 Listens on a port, handles client connections, enforces unique usernames,
 and supports real-time message forwarding between users. Includes support
-for listing users and graceful exits.
+for listing users, graceful exits, and offline message queuing.
 """
 
 import socket
@@ -14,6 +14,8 @@ import argparse
 
 # Dictionary to store active users
 users = {}
+# Dictionary to store offline messages
+offline_messages = {}
 
 def handle_client(client_socket: ssl.SSLSocket, address: tuple[str, int]) -> None:
     """Handles communication with a connected client.
@@ -33,11 +35,16 @@ def handle_client(client_socket: ssl.SSLSocket, address: tuple[str, int]) -> Non
                 requested_username = message.split()[1]
                 if requested_username in users:
                     client_socket.send("ERROR:Username already taken".encode())
-                    # Do not register or proceed, allow client to retry
                 else:
                     username = requested_username
                     users[username] = client_socket
                     client_socket.send(f"Welcome {username}!".encode())
+
+                    # Deliver offline messages if any
+                    if username in offline_messages:
+                        for msg in offline_messages[username]:
+                            client_socket.send(msg.encode())
+                        del offline_messages[username]
 
             elif not username:
                 client_socket.send("ERROR:You must register a username first.".encode())
@@ -63,7 +70,11 @@ def handle_client(client_socket: ssl.SSLSocket, address: tuple[str, int]) -> Non
                     except Exception:
                         client_socket.send("ERROR:Failed to send message.".encode())
                 else:
-                    client_socket.send("ERROR:Recipient not found.".encode())
+                    # Queue message for offline recipient
+                    if recipient not in offline_messages:
+                        offline_messages[recipient] = []
+                    offline_messages[recipient].append(f"{username}: {msg}")
+                    client_socket.send(f"{recipient} is offline. Your message has been saved.".encode())
     except Exception as e:
         print(f"Error handling client {address}: {e}")
     finally:
