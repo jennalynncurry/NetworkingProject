@@ -10,26 +10,9 @@ for listing users and graceful exits.
 import socket
 import threading
 import argparse
-import random
-import string
 
 # Dictionary to store active users
 users = {}
-
-def generate_unique_username(base_name: str) -> str:
-    """Appends a random string to create a unique username.
-
-    Args:
-        base_name: Desired base username.
-
-    Returns:
-        A modified username guaranteed to be unique.
-    """
-    while True:
-        suffix = ''.join(random.choices(string.ascii_letters + string.digits, k=4))
-        new_username = f"{base_name}_{suffix}"
-        if new_username not in users:
-            return new_username
 
 def handle_client(client_socket: socket.socket, address: tuple[str, int]) -> None:
     """Handles communication with a connected client.
@@ -48,10 +31,8 @@ def handle_client(client_socket: socket.socket, address: tuple[str, int]) -> Non
             if message.startswith("server:register"):
                 requested_username = message.split()[1]
                 if requested_username in users:
-                    unique_username = generate_unique_username(requested_username)
-                    username = unique_username
-                    users[username] = client_socket
-                    client_socket.send(f"Username taken. You are registered as {username}".encode())
+                    client_socket.send("ERROR:Username already taken".encode())
+                    # Do not register or proceed, allow client to retry
                 else:
                     username = requested_username
                     users[username] = client_socket
@@ -96,7 +77,7 @@ def start_server(port: int) -> None:
         port: Port number to bind the server socket to.
     """
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(('localhost', port))
+    server_socket.bind(('0.0.0.0', port))
     server_socket.listen()
     print(f"Server listening on port {port}")
 
