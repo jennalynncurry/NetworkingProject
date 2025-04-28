@@ -39,6 +39,7 @@ def handle_client(client_socket: socket.socket, address: tuple[str, int]) -> Non
                 requested_username = message.split()[1]
                 if requested_username in users:
                     client_socket.send("ERROR:Username already taken".encode())
+                    # Do not register or proceed, allow client to retry
                 else:
                     username = requested_username
                     users[username] = client_socket
