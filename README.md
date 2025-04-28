@@ -2,7 +2,7 @@
 
 ## 📚 Overview
 
-This project implements a real-time, push-based client-server chat system written in Python using sockets and threading. It allows multiple clients to connect to a server, register with a unique username, and exchange messages with other users. The system is designed to be lightweight, responsive, and easy to test on a local network or using Codespaces.
+This project implements a real-time, push-based client-server chat system written in Python using sockets and threading. It allows multiple clients to connect to a server, register with a unique username, and exchange messages with other users. The system supports both private messages and chat rooms, with additional features like offline message queuing and command-line interaction.
 
 ---
 
@@ -10,92 +10,100 @@ This project implements a real-time, push-based client-server chat system writte
 
 ### 1. Start the Server
 
-Run the server on your machine or Codespaces:
-
 ```bash
-python3 server.py --port 8080
+python3 final_server.py --port 8080
 ```
 
 - The server will listen for incoming client connections on port 8080.
-- Make sure to forward the port in Codespaces and bind to `0.0.0.0` if using two different machines. Use `localhost` if not.
+- Make sure to forward the port if you're using GitHub Codespaces or a cloud-based environment.
 
 ---
 
 ### 2. Start the Client
 
-On the same or another terminal (or machine):
-
 ```bash
-python3 client.py --host 127.0.0.1 --port 8080
+python3 final_client.py --host 127.0.0.1 --port 8080
 ```
 
-- Replace `127.0.0.1` with your server's IP if connecting from another computer.
-- You’ll be prompted to enter a username. It must be unique.
+- Replace `127.0.0.1` with your server’s IP address if connecting remotely.
+- You’ll be prompted to enter a unique username. If it's taken, you'll need to choose a new one.
 
 ---
 
-## 🗨️ Supported Client Commands
+## 🗨️ Supported Features & Commands
 
-- **`<recipient>:<message>`** – Sends `<message>` to `<recipient>`.
-  - Example: `Bob:Hey there!`
-- **`who`** – Lists all active users.
-- **`exit`** – Gracefully disconnects from the server.
+### General Commands (outside chat rooms):
+- `message` — Prompted to enter recipient and message
+- `who` — Lists all active users
+- `join <roomname>` — Joins (or creates) a chat room
+- `exit` — Gracefully disconnects
+- `leave` — Does nothing unless you're already in a room
 
----
-
-## 🛠️ Design and Implementation
-
-### Server (`server.py`)
-- Accepts multiple client connections using threads.
-- Each client runs in its own thread and handles:
-  - User registration (`server:register`)
-  - Message routing (`<recipient>:<message>`)
-  - Commands like `server:who` and `server:exit`
-- Uses a shared dictionary `users = {username: socket}` to track connected clients.
-- Prevents duplicate usernames and removes users cleanly on exit.
-
-### Client (`client.py`)
-- Connects to the server via IP and port.
-- Prompts the user for a unique username and retries if it's already taken.
-- Starts a background listener thread to print incoming messages in real-time.
-- Main thread handles input and sends commands to the server.
-
-### Threading Model
-- Server uses threads for each client (non-blocking).
-- Client uses a dual-thread model: one for sending, one for receiving messages.
+### In a Chat Room:
+- Any message you type is broadcast to the room
+- `leave` — Leave the current chat room
+- All other inputs are treated as chat (even `exit` and `who`)
 
 ---
 
-## ✅ Example Workflow
+## 💡 Special Features
 
-1. Alice and Bob both run `client.py` and register usernames.
-2. Alice types `Bob:Hi Bob!` — Bob immediately sees: `Alice: Hi Bob!`
-3. Bob sends `server:who` — sees a list of active users.
-4. Alice types `server:exit` — exits chat and her name disappears from the list.
+### ✅ Offline Messaging
+- If a user sends a message to someone who is **offline**, the server stores it.
+- Once that recipient connects, any queued messages are delivered instantly.
 
----
-
-## 🧪 Testing Tips
-
-- Try running multiple clients at once.
-- Attempt duplicate usernames to verify rejection.
-- Use `server:who` and `server:exit` to test cleanup.
-- Test across machines or through Codespaces with port forwarding enabled.
+### ✅ Chat Rooms
+- Create or join rooms with `join <roomname>`
+- Messages sent inside a room are broadcast to all room members
+- Room entry/exit is announced automatically to others in the room
+- Use `leave` to exit a room
 
 ---
 
-## 📦 Folder Structure
+## 🛠️ Implementation Overview
+
+### Server
+- Python sockets with multithreaded client handling
+- Tracks users and rooms with dictionaries
+- Handles direct messages, room messages, and offline queues
+- Commands: `register`, `who`, `exit`, `join`, `leave`
+
+### Client
+- Dual-threaded: one for sending input, one for receiving messages
+- Dynamic prompt updates based on whether you're in a chat room
+- Graceful handling of disconnects and username conflicts
+
+---
+
+## 📸 Sample Flow
+
+1. Alice joins room `teamchat`, Bob joins the same.
+2. Alice types: `Hello team!`
+3. Bob sees: `Alice (in teamchat): Hello team!`
+4. Bob types `leave` → he exits the room
+5. Alice sends Bob a private message: Bob will see it when he reconnects
+
+---
+
+## 📦 Project Structure
 
 ```
 NetworkingProject/
-├── client.py
-├── server.py
+├── final_server.py
+├── final_client.py
 ├── README.md
-└── screenshots/  (optional for report)
+└── screenshots/  # optional
 ```
 
 ---
 
-## 🧠 Final Thoughts
+## ✅ Final Notes
 
-This system demonstrates key networking concepts like TCP sockets, concurrency with threading, and push-style communication. It’s designed to be simple, extensible, and adaptable to future features like group chat, offline messaging, or GUI integration.
+This project demonstrates core networking concepts like:
+- TCP socket communication
+- Multithreaded server design
+- Command parsing
+- Message routing and queuing
+- Real-time updates in terminal UI
+
+It's lightweight, extensible, and ideal for future upgrades (like TLS encryption or a GUI).
